@@ -1,69 +1,96 @@
-# Agentic Multimodal PDF Chatbot
+# 📄 AGENTIC-PDF: Multimodal Chat Companion
 
-A professional-grade chatbot that leverages **Gemini 2.5 Flash** and **LangGraph** to provide agentic, multimodal reasoning over PDF documents. It doesn't just read text—it understands tables, diagrams, and the connections between them.
+✨ **Transform your PDFs into interactive conversations.** Powered by **Gemini 2.5 Flash** and **LangGraph**, this agentic RAG system understands text, complex tables, and intricate diagrams within your documents.
 
-## 🚀 Features
-- **Multimodal Understanding**: Analyzes images, charts, and tables natively using Gemini's latest 2.5 Flash model.
-- **Agentic Reasoning**: Controlled by LangGraph to ensure accurate, context-aware responses.
-- **Premium UI**: Modern glassmorphic React interface with smooth animations and drag-and-drop support.
-- **FastAPI Backend**: High-performance backend with seamless integration with the Google GenAI SDK.
+---
+
+## 🚀 Key Features
+
+- 🧠 **Agentic Reasoning**: Uses LangGraph to orchestrate complex reasoning over multi-page documents.
+- 🖼️ **Multimodal Vision**: Native support for analyzing images and charts directly within your PDFs.
+- 📸 **Visual Snippets**: Automatically extracts and displays relevant PDF sections in the chat UI when you ask about tables or images.
+- 💎 **Premium UI**: Sleek, glassmorphic interface built with React, Framer Motion, and Tailwind-inspired aesthetics.
+- ⚡ **High Performance**: Powered by the latest Gemini 2.5 Flash for lightning-fast, intelligent responses.
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+graph TD
+    User([User]) -->|Upload PDF| FastAPI[FastAPI Backend]
+    FastAPI -->|Extract Images| PyMuPDF[PyMuPDF Processor]
+    FastAPI -->|Upload| GeminiSDK[Gemini Multimodal SDK]
+    User -->|Ask Question| LangGraph[LangGraph Agent]
+    LangGraph -->|Reasoning| GeminiLLM[Gemini 2.5 Flash]
+    GeminiLLM -->|Extract Context| GeminiLLM
+    GeminiLLM -->|Return Answer + Page Hints| LangGraph
+    LangGraph -->|Page Image| UI[React UI]
+    UI -->|Render Markdown + Snippets| User
+```
+
+---
 
 ## 🛠️ Tech Stack
-- **Frontend**: React, Vite, Framer Motion, Lucide React, Axios.
-- **Backend**: Python, FastAPI, LangGraph, Google GenAI SDK.
-- **AI Model**: Gemini 2.5 Flash.
 
-## 📂 Project Structure
-```text
-.
-├── server/             # FastAPI backend
-│   ├── main.py         # App entrance & LangGraph flow
-│   ├── processor.py    # Gemini Multimodal service
-│   ├── venv/           # Virtual environment
-│   └── .env            # Environment variables (API Key)
-├── frontend/           # React frontend
-│   ├── src/            # Components and styles
-│   └── package.json    # Frontend dependencies
-├── run.ps1             # Convenience script to start both servers
-└── .gitignore          # Git exclusion rules
-```
+| Layer | Technology |
+| :--- | :--- |
+| **LLM** | Google Gemini 2.5 Flash |
+| **Orchestration** | LangChain / LangGraph |
+| **Backend** | Python / FastAPI |
+| **PDF Engine** | PyMuPDF (fitz) |
+| **Frontend** | React / Vite / Framer Motion |
+| **Styling** | Vanilla CSS (Glassmorphism) |
+
+---
 
 ## 🚥 Getting Started
 
-### Prerequisites
+### 1. Prerequisites
+- Python 3.9+
 - Node.js & npm
-- Python 3.10+
-- A Google Gemini API Key
+- Gemini API Key ([Get one here](https://aistudio.google.com/))
 
-### Setup
-1.  **Clone the repository**:
-    ```bash
-    git clone <your-repo-url>
-    cd agentic-rag-qa-bot
-    ```
+### 2. Backend Setup
+```bash
+cd server
+python -m venv venv
+.\venv\Scripts\activate
+pip install -r requirements.txt
+```
+Create a `.env` file in the `server` directory:
+```env
+GOOGLE_API_KEY=your_api_key_here
+```
 
-2.  **Configure Backend**:
-    - Navigate to `server/`.
-    - Create a `.env` file (if not present) and add:
-      ```text
-      GOOGLE_API_KEY=your_api_key_here
-      ```
-    - The virtual environment and dependencies should already be set up if you followed the installation steps.
+### 3. Frontend Setup
+```bash
+cd frontend
+npm install
+```
 
-### Running the App
-The easiest way is to use the provided PowerShell script in the root directory:
+### 4. Running the App
+From the root directory, simply run:
 ```powershell
 .\run.ps1
 ```
 
-Alternatively, run manually:
-- **Backend**: `cd server; .\venv\Scripts\activate; python main.py`
-- **Frontend**: `cd frontend; npm run dev`
+---
 
-## 💬 Example Queries
-- "Explain the flowchart on page 3."
-- "What is the correlation between Figure 1 and Table 2?"
-- "Summarize the key findings from the charts on page 10."
+## 📸 Screenshots & Usage
 
-## 📄 License
-MIT
+| Upload & Analyze | Interactive Visuals |
+| :--- | :--- |
+| Drop any PDF (Technical Papers, Manuals, Invoices). | Ask "Explain the diagram on page 2" to see snippets! |
+
+---
+
+## 🤝 Project Structure
+
+- `server/`: FastAPI backend, Gemini processor, and LangGraph agent logic.
+- `frontend/`: React source code with glassmorphic UI components.
+- `uploads/`: Temporary storage for local PDF processing (auto-managed).
+
+---
+
+Built with ❤️ using Gemini 2.5 Flash.

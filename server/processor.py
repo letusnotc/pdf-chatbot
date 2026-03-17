@@ -13,13 +13,25 @@ class MultimodalPDFProcessor:
         """
         Uploads a PDF to Gemini using the new google-genai SDK.
         """
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key or api_key == "your_api_key_here":
+            print("ERROR: GOOGLE_API_KEY is missing or invalid in .env")
+            raise ValueError("GOOGLE_API_KEY is not set. Please update the .env file in the server directory with a valid Gemini API key.")
+
         print(f"Uploading {file_path} to Gemini...")
-        with open(file_path, 'rb') as f:
+        print(f"Using API Key (first 5 chars): {api_key[:5]}...")
+        
+        # In the google-genai SDK, the parameter is 'file' for the path string
+        try:
             uploaded_file = self.client.files.upload(
-                file=f,
+                file=file_path,
                 config={'mime_type': 'application/pdf'}
             )
-        return uploaded_file
+            print(f"Upload to Gemini successful: {uploaded_file.name}")
+            return uploaded_file
+        except Exception as sdk_err:
+            print(f"Gemini SDK Upload Error: {sdk_err}")
+            raise sdk_err
 
     def extract_page(self, pdf_path: str, page_no: int):
         """

@@ -97,7 +97,7 @@ async def upload_pdf(file: UploadFile = File(...)):
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
     
-    upload_dir = "uploads"
+    upload_dir = os.path.join(os.getcwd(), "uploads")
     if not os.path.exists(upload_dir):
         os.makedirs(upload_dir)
         
@@ -113,9 +113,13 @@ async def upload_pdf(file: UploadFile = File(...)):
         }
         return {"file_id": uploaded_file.name, "message": "File processed successfully"}
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         if os.path.exists(local_path):
             os.remove(local_path)
-        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+        # Ensure the actual error message reaches the frontend for easier debugging
+        error_msg = str(e) if str(e) else "Internal Server Error during upload"
+        raise HTTPException(status_code=500, detail=error_msg)
 
 @app.post("/chat")
 async def chat_with_pdf(request: ChatRequest):
