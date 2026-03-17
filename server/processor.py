@@ -21,6 +21,23 @@ class MultimodalPDFProcessor:
             )
         return uploaded_file
 
+    def extract_page(self, pdf_path: str, page_no: int):
+        """
+        Extracts a specific page from the PDF as an image (base64).
+        """
+        import fitz # PyMuPDF
+        import base64
+        
+        doc = fitz.open(pdf_path)
+        if page_no < 1 or page_no > len(doc):
+            return None
+        
+        page = doc.load_page(page_no - 1)
+        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2)) # High res
+        img_data = pix.tobytes("png")
+        
+        return base64.b64encode(img_data).decode('utf-8')
+
     def query_document(self, uploaded_file, query: str):
         """
         Queries the uploaded PDF multimodally.

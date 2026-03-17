@@ -39,7 +39,11 @@ function App() {
         message: content,
         file_id: uploadedFile?.id
       });
-      setMessages(prev => [...prev, { role: 'bot', content: response.data.response }]);
+      setMessages(prev => [...prev, { 
+        role: 'bot', 
+        content: response.data.response,
+        images: response.data.images 
+      }]);
     } catch (error) {
       console.error("Chat failed", error);
       setMessages(prev => [...prev, { role: 'bot', content: "Sorry, I encountered an error while processing your request." }]);

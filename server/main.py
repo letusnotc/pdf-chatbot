@@ -26,7 +26,7 @@ app.add_middleware(
 processor = MultimodalPDFProcessor()
 
 # Storage for uploaded file references
-# We store the file objects or names from the Gemini File API
+# We store both the Gemini file name and the local path for image extraction
 file_store = {}
 
 class ChatRequest(BaseModel):
@@ -35,33 +35,56 @@ class ChatRequest(BaseModel):
 
 class AgentState(TypedDict):
     messages: Annotated[list, operator.add]
-    file_name: Optional[str]
+    file_id: Optional[str]
     response: Optional[str]
+    images: Optional[List[str]]
 
 # Define LangGraph flow
 def call_gemini_agent(state: AgentState):
     query = state['messages'][-1]
-    file_name = state.get('file_name')
+    file_id = state.get('file_id')
     
-    if not file_name:
+    if not file_id or file_id not in file_store:
         return {"response": "Please upload a PDF first."}
     
-    # In the new SDK, we can pass the file reference
-    # We retrieve the file metadata by name if we only have the name
+    file_info = file_store[file_id]
+    local_path = file_info['local_path']
+    
     try:
-        # Re-fetching file object from name to be sure it's valid for content generation
-        file_ref = processor.client.files.get(name=file_name)
+        file_ref = processor.client.files.get(name=file_id)
+        
+        prompt = (
+            "You are a multimodal agent. Answer based on the provided PDF. "
+            "Pay attention to tables, images, and the connections between them. "
+            "IMPORTANT: If you discuss a specific table, chart, or image, "
+            "ALWAYS mention the page number clearly in the format [PAGE:X]. "
+            "This will trigger a visual snippet for the user."
+            f"\n\nQuery: {query}"
+        )
         
         response = processor.client.models.generate_content(
             model=processor.model_name,
-            contents=[
-                file_ref,
-                f"You are a multimodal agent. Answer based on the provided PDF. Pay attention to tables, images, and the connections between them. \n\nQuery: {query}"
-            ]
+            contents=[file_ref, prompt]
         )
-        return {"response": response.text}
+        
+        res_text = response.text
+        images = []
+        
+        # Extract page hints and generate base64 snippets
+        import re
+        page_matches = re.findall(r"\[PAGE:(\d+)\]", res_text)
+        if page_matches:
+            for page_num in set(page_matches):
+                try:
+                    img_b64 = processor.extract_page(local_path, int(page_num))
+                    if img_b64:
+                        images.append(img_b64)
+                except Exception as ex:
+                    print(f"Failed to extract page {page_num}: {ex}")
+        
+        return {"response": res_text, "images": images}
     except Exception as e:
-        return {"response": f"Error during agent reasoning: {str(e)}"}
+        return {"response": f"Error during agent reasoning: {str(e)}", "images": []}
 
 workflow = StateGraph(AgentState)
 workflow.add_node("agent", call_gemini_agent)
@@ -74,35 +97,41 @@ async def upload_pdf(file: UploadFile = File(...)):
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
     
-    temp_path = f"temp_{file.filename}"
-    with open(temp_path, "wb") as buffer:
+    upload_dir = "uploads"
+    if not os.path.exists(upload_dir):
+        os.makedirs(upload_dir)
+        
+    local_path = os.path.join(upload_dir, file.filename)
+    with open(local_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
     try:
-        uploaded_file = await processor.process_pdf(temp_path)
-        # Store the file name (e.g. 'files/...')
-        file_store[uploaded_file.name] = uploaded_file.name
+        uploaded_file = await processor.process_pdf(local_path)
+        file_store[uploaded_file.name] = {
+            "name": uploaded_file.name,
+            "local_path": local_path
+        }
         return {"file_id": uploaded_file.name, "message": "File processed successfully"}
     except Exception as e:
+        if os.path.exists(local_path):
+            os.remove(local_path)
         raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
-    finally:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
 
 @app.post("/chat")
 async def chat_with_pdf(request: ChatRequest):
-    file_name = file_store.get(request.file_id)
-    
     inputs = {
         "messages": [request.message],
-        "file_name": file_name
+        "file_id": request.file_id
     }
     
     try:
         result = agent_app.invoke(inputs)
-        return {"response": result["response"]}
+        return {
+            "response": result["response"],
+            "images": result.get("images", [])
+        }
     except Exception as e:
-        return {"response": f"Chat processing error: {str(e)}"}
+        return {"response": f"Chat processing error: {str(e)}", "images": []}
 
 if __name__ == "__main__":
     import uvicorn

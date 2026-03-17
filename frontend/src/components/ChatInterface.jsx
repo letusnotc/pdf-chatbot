@@ -40,6 +40,23 @@ const ChatInterface = ({ messages, onSendMessage, isProcessing }) => {
                 </span>
              </div>
              <ReactMarkdown>{msg.content}</ReactMarkdown>
+             {msg.images && msg.images.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+                  {msg.images.map((img, i) => (
+                    <img 
+                      key={i} 
+                      src={`data:image/png;base64,${img}`} 
+                      alt="PDF Page Snippet" 
+                      style={{ 
+                        borderRadius: '12px', 
+                        border: '1px solid var(--glass-border)',
+                        maxWidth: '100%',
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+                      }} 
+                    />
+                  ))}
+                </div>
+             )}
           </div>
         ))}
         {isProcessing && (
